@@ -4,6 +4,7 @@ module Lambda.Test where
 import Lambda.Calculus
 import Lambda.PrettyPrint
 import Lambda.Parser
+import Lambda.Expressions
 
 import Test.QuickCheck
 import Data.Function
@@ -15,11 +16,7 @@ randomName = do
   resize size (listOf1 randomAlphaNum)
 
 randomAlphaNum :: Gen Char
-randomAlphaNum = elements "abcdefghijklmnopqrstuvwxyz0123456789_"
-
-randomAlpha :: Gen String
-randomAlpha = singleton <$> elements "abcdefghijklmnopqrstuvwxyz"
-  where singleton x = [x]
+randomAlphaNum = elements identifierChars
 
 instance Arbitrary Lambda where
   arbitrary =
@@ -66,6 +63,37 @@ prop_substitutionRemovesFreeVariable expression substitution =
 prop_parserPrinterIdentity :: Lambda -> Property
 prop_parserPrinterIdentity expression =
   expression === parseLambda (show expression)
+
+-- Actual Expression tests
+
+interpretationEquality :: (LambdaValue a, LambdaValue r, Show r, Eq r) => (a -> r) -> Lambda -> a -> Property
+interpretationEquality function functionAsLambda value =
+  function value === interpret (functionAsLambda `App` toLambda value)
+
+interpretationEquality2 :: (LambdaValue a2, LambdaValue a1, LambdaValue r, Show r, Eq r) => (a1 -> a2 -> r) -> Lambda -> a1 -> a2 -> Property
+interpretationEquality2 function functionAsLambda value1 value2 =
+  function value1 value2 === interpret (functionAsLambda `App` toLambda value1 `App` toLambda value2)
+
+prop_interpretBinaryBool :: Bool -> Bool -> Property
+prop_interpretBinaryBool lhs rhs =
+  conjoin
+    (map (\(int, op) -> interpretationEquality2 int op lhs rhs)
+      [ ((==), boolEq)
+      , ((||), boolOr)
+      , ((&&), boolAnd)
+      ])
+
+prop_interpretNotEq :: Bool -> Property
+prop_interpretNotEq =
+  interpretationEquality not boolNot
+
+-- booleans are encoded as "if"s in lambda calculus
+prop_interpretBoolIf :: Bool -> Bool -> Bool -> Property
+prop_interpretBoolIf prop true false =
+  (if prop then true else false) === interpret (toLambda prop `App` toLambda true `App` toLambda false)
+
+prop_interpretPlus :: Positive Int -> Positive Int -> Property
+prop_interpretPlus (Positive a) (Positive b) = interpretationEquality2 (+) natPlus a b
 
 return []
 runTests = $quickCheckAll

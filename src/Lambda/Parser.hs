@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
 module Lambda.Parser where
 
 import Lambda.Calculus
@@ -8,8 +7,12 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Data.Void
 import Data.Maybe (fromJust)
+import Data.String
 import Control.Monad (void)
 import Control.Applicative
+
+instance IsString Lambda where
+  fromString = parseLambda
 
 parseLambda :: String -> Lambda
 parseLambda = fromJust . parseMaybe lambda
@@ -29,7 +32,10 @@ inParens :: Parser a -> Parser a
 inParens = between (symbol "(") (symbol ")")
 
 name :: Parser Name
-name = lexeme (some (alphaNumChar <|> char '_'))
+name = lexeme (some (oneOf identifierChars))
+
+identifierChars :: String
+identifierChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'+-*/$%&|><=?!#"
 
 lambda :: Parser Lambda
 lambda =
