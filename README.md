@@ -4,8 +4,8 @@ This is just a little playground I use when developing small toy projects in has
 
 ## Lambda Calculus
 
-A parser / prettyprinter for the lambda calculus.
+A parser / prettyprinter / interpreter / normalizer for the lambda calculus. 
 
 ## Propositional Logic
 
-A parsre / prettyprinter / tautology checker / equality checker for propositional logic. I used this project to learn about pretty printing, parsing and QuickCheck.
+A parser / prettyprinter / tautology checker / equality checker for propositional logic. I used this project to learn about pretty printing, parsing and QuickCheck.
