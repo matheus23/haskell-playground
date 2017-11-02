@@ -1,6 +1,6 @@
 module Lambda.Parser where
 
-import Lambda.Calculus
+import Lambda.Untyped
 
 import Text.Megaparsec
 import Text.Megaparsec.Char

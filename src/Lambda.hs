@@ -1,5 +1,5 @@
 module Lambda
-    ( module Lambda.Calculus
+    ( module Lambda.Untyped
     , module Lambda.Parser
     , module Lambda.PrettyPrint
     , module Lambda.Test
@@ -7,7 +7,7 @@ module Lambda
     , module Lambda.Interpreter
     ) where
 
-import Lambda.Calculus
+import Lambda.Untyped
 import Lambda.Parser
 import Lambda.PrettyPrint
 import Lambda.Test

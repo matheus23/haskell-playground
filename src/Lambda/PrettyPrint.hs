@@ -1,6 +1,6 @@
 module Lambda.PrettyPrint where
 
-import Lambda.Calculus
+import Lambda.Untyped
 
 instance Show Lambda where
   showsPrec _ (Var str) = showString str

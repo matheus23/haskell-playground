@@ -1,4 +1,4 @@
-module Lambda.Calculus where
+module Lambda.Untyped where
 
 import qualified Data.Set as Set
 

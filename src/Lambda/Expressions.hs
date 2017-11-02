@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lambda.Expressions where
 
-import Lambda.Calculus
+import Lambda.Untyped
 import Lambda.Parser
 import Lambda.PrettyPrint
 import Lambda.Interpreter

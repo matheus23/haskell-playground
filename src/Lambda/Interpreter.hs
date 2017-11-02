@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Lambda.Interpreter where
 
-import Lambda.Calculus
+import Lambda.Untyped
 import Lambda.PrettyPrint
 
 import qualified Data.Map as Map
@@ -63,8 +63,7 @@ executeStdLib = executeWith stdLib
 stdLib :: Env
 stdLib =
   Map.fromList
-    [ ("0", Primitive (Number 0))
-    , primitiveFunc "+1" (Primitive . Number . (+ 1) <$> number)
+    [ primitiveFunc "+1" (Primitive . Number . (+ 1) <$> number)
     , primitiveFunc "+" (Primitive . Number <$> ((+) <$> number <*> number))
     , primitiveFunc "-" (Primitive . Number <$> ((-) <$> number <*> number))
     , primitiveFunc "!" (Primitive . Boolean . not <$> boolean)

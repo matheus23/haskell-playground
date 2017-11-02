@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lambda.Test where
 
-import Lambda.Calculus
+import Lambda.Untyped
 import Lambda.PrettyPrint
 import Lambda.Parser
 import Lambda.Expressions
