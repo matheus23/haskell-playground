@@ -31,19 +31,22 @@ library
 
   build-depends:       base, megaparsec >= 6.0.0, containers, pretty, QuickCheck >= 2.10.0, recursion-schemes
   default-language:    Haskell2010
+  extensions:          DeriveFunctor, OverloadedStrings, TemplateHaskell, ScopedTypeVariables
 
 executable lambda-reactive
   hs-source-dirs:      lambda-reactive
   main-is:             Main.hs
   build-depends:       playground, base, containers, linear,
                        Reactives, DeclarativeGraphics, DeclarativeGraphics-Cairo, DeclarativeGraphics-SDL
+  extensions:          DeriveFunctor, OverloadedStrings, TemplateHaskell, ScopedTypeVariables
 
 executable classic-sequent
- hs-source-dirs:      classic-sequent
- main-is:             Main.hs
- other-modules:       TermWidget, ProofWidget
- build-depends:       playground, base, containers, linear, recursion-schemes,
-                      Reactives, DeclarativeGraphics, DeclarativeGraphics-Cairo, DeclarativeGraphics-SDL
+  hs-source-dirs:      classic-sequent
+  main-is:             Main.hs
+  other-modules:       TermWidget, ProofWidget
+  build-depends:       playground, base, containers, linear, recursion-schemes,
+                       Reactives, DeclarativeGraphics, DeclarativeGraphics-Cairo, DeclarativeGraphics-SDL
+  extensions:          DeriveFunctor, OverloadedStrings, TemplateHaskell, ScopedTypeVariables
 
 source-repository head
   type:     git

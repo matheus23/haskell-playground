@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Lambda.Test where
 
 import Lambda.Untyped

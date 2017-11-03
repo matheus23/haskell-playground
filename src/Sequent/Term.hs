@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 module Sequent.Term where
 
 import Data.Functor.Foldable

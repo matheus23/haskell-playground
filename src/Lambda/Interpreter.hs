@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 module Lambda.Interpreter where
 
 import Lambda.Untyped

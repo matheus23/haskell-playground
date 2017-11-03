@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lambda.Expressions where
 
 import Lambda.Untyped
