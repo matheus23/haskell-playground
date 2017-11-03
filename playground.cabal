@@ -16,8 +16,31 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Logic, Lambda
+  other-modules:       Lambda.Expressions,
+                       Lambda.Interpreter,
+                       Lambda.Parser,
+                       Lambda.PrettyPrint,
+                       Lambda.Test,
+                       Lambda.Untyped,
+                       Logic.Parser,
+                       Logic.PrettyPrinter,
+                       Logic.Propositional,
+                       Logic.Test
+
   build-depends:       base, megaparsec >= 6.0.0, containers, pretty, QuickCheck >= 2.10.0
   default-language:    Haskell2010
+
+executable lambda-reactive
+  hs-source-dirs:      lambda-reactive
+  main-is:             Main.hs
+  build-depends:       playground, base, containers, linear,
+                       Reactives, DeclarativeGraphics, DeclarativeGraphics-Cairo, DeclarativeGraphics-SDL
+
+executable classic-sequent
+ hs-source-dirs:      classic-sequent
+ main-is:             Main.hs
+ build-depends:       playground, base, containers, linear,
+                      Reactives, DeclarativeGraphics, DeclarativeGraphics-Cairo, DeclarativeGraphics-SDL
 
 source-repository head
   type:     git
