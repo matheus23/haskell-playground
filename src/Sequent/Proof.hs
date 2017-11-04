@@ -18,5 +18,5 @@ because reasons assumptions implications = Fix (Because reasons (Sequent assumpt
 exampleProof :: Proof
 exampleProof =
   because
-    []
+    [because [] [] [var "a"], because [] [] [var "b"]]
     [var "c", impliesTerm (var "c") (var "a"), impliesTerm (var "c") (var "b")] [andTerm (var "a") (var "b")]

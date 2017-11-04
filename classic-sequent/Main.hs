@@ -23,4 +23,7 @@ mstyle :: TextStyle
 mstyle = defaultTextStyle { fontSize = 20 }
 
 main :: IO ()
-main = runReactive (move (V2 400 500) . alignHV (0.5, 1) . viewProof mstyle) exampleProof
+main =
+  runReactive
+    (move (V2 400 500) . alignHV (0.5, 1) . viewFocusableProof mstyle)
+    (nothingFocused exampleProof)
