@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Logic, Lambda, Sequent, Infinity
+  exposed-modules:     Logic, Lambda, Sequent, Infinity, Zippers
   other-modules:       Lambda.Expressions,
                        Lambda.Interpreter,
                        Lambda.Parser,
@@ -29,7 +29,7 @@ library
                        Sequent.Term,
                        Sequent.Proof
 
-  build-depends:       base, megaparsec >= 6.0.0, containers, pretty, QuickCheck >= 2.10.0, recursion-schemes
+  build-depends:       base, megaparsec >= 6.0.0, containers, pretty, QuickCheck >= 2.10.0, recursion-schemes, ansi-wl-pprint
   default-language:    Haskell2010
   extensions:          DeriveFunctor, OverloadedStrings, TemplateHaskell, ScopedTypeVariables
 
