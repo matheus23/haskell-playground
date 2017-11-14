@@ -1,19 +1,22 @@
 module Logic.PrettyPrinter where
 
 import Logic.Propositional
+import Data.Functor.Foldable
+import Data.Functor.Classes
 
-instance Show Expr where
-  showsPrec _ Zero = showString "0"
-  showsPrec _ One = showString "1"
-  showsPrec _ (Var name) = showString name
-  showsPrec p (Not expr) = showParen (p > 5) $
-    showString "¬" . showsPrec 5 expr
-  showsPrec p (Op operator lhs rhs) = showParen (p > (prec - 1)) $
-    showsPrec prec lhs . showString (prettyPrintOp operator) . showsPrec (prec - 1) rhs
-    where prec = precedence operator
+prettyPrintExprAlg :: ExprF (Int -> ShowS) -> Int -> ShowS
+prettyPrintExprAlg Zero _ = showString "0"
+prettyPrintExprAlg One _ = showString "1"
+prettyPrintExprAlg (Var name) _ = showString name
+prettyPrintExprAlg (Not expr) p = showParen (p > 5) $ showString "¬" . expr 5
+prettyPrintExprAlg (Op operator lhs rhs) p =
+  showParen (p > (prec - 1))
+    (lhs prec . showString (prettyPrintOp operator) . rhs (prec - 1))
+  where
+    prec = precedence operator
 
-parens :: String -> String
-parens str = "(" ++ str ++ ")"
+prettyPrintExpr :: Expr -> String
+prettyPrintExpr expr = fold prettyPrintExprAlg expr 0 "" -- 0 initial precedence, "" for printing ShowS
 
 precedence :: BiOperator -> Int
 precedence And = 4

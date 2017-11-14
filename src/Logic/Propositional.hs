@@ -2,37 +2,70 @@ module Logic.Propositional where
 
 import qualified Data.Map as Map
 import Data.Map ((!))
+import qualified Data.Set as Set
+import Data.Set (Set)
 
-import Text.PrettyPrint
+import Data.Functor.Foldable
+import Data.Functor.Classes
+import Text.Show.Deriving
+import Text.Read.Deriving
+import Data.Eq.Deriving
 
 data BiOperator
   = And
   | Or
   | Imply
   | Equiv
-  deriving (Eq)
+  deriving (Eq, Show, Read)
 
-data Expr
+data ExprF a
   = Zero
   | One
   | Var String
-  | Not Expr
-  | Op BiOperator Expr Expr
-  deriving (Eq)
+  | Not a
+  | Op BiOperator a a
+  deriving (Functor)
+
+$(deriveShow1 ''ExprF)
+$(deriveRead1 ''ExprF)
+$(deriveEq1 ''ExprF)
+
+type Expr = Fix ExprF
 
 type Model = Map.Map String Bool
+
+-- Construct values
+
+mkZero, mkOne :: Expr
+mkZero = Fix Zero
+mkOne = Fix One
+
+mkVar :: String -> Expr
+mkVar = Fix . Var
+
+mkNot :: Expr -> Expr
+mkNot = Fix . Not
+
+mkAnd, mkOr, mkImply, mkEquiv :: Expr -> Expr -> Expr
+mkAnd lhs rhs = Fix (Op And lhs rhs)
+mkOr lhs rhs = Fix (Op Or lhs rhs)
+mkImply lhs rhs = Fix (Op Imply lhs rhs)
+mkEquiv lhs rhs = Fix (Op Equiv lhs rhs)
 
 -- Compute Values
 
 val :: [(String, Bool)] -> Expr -> Bool
 val modelAsList = value (Map.fromList modelAsList)
 
+valueAlg :: Model -> ExprF Bool -> Bool
+valueAlg _ Zero = False
+valueAlg _ One = True
+valueAlg model (Var var) = model ! var
+valueAlg model (Not expr) = not expr
+valueAlg model (Op operator left right) = interpretOperator operator left right
+
 value :: Model -> Expr -> Bool
-value _ Zero = False
-value _ One = True
-value model (Var var) = model ! var
-value model (Not expr) = not (value model expr)
-value model (Op operator left right) = interpretOperator operator (value model left) (value model right)
+value model = fold (valueAlg model)
 
 interpretOperator :: BiOperator -> Bool -> Bool -> Bool
 interpretOperator And = (&&)
@@ -43,15 +76,15 @@ interpretOperator Equiv = (==)
 -- Eqivalence and Tautology
 
 interpretationEquivalence :: Expr -> Expr -> Bool
-interpretationEquivalence exprA exprB = isTautology (Op Equiv exprA exprB)
+interpretationEquivalence exprA exprB = isTautology (exprA `mkEquiv` exprB)
 
 isTautology :: Expr -> Bool
 isTautology expr =
   isTautologyWith (freeVariables expr) expr
 
-isTautologyWith :: [String] -> Expr -> Bool
+isTautologyWith :: Set String -> Expr -> Bool
 isTautologyWith vars expr =
-    all (`val` expr) (allModels vars)
+    all (`val` expr) (allModels (Set.toList vars))
 
 allModels :: [String] -> [[(String, Bool)]]
 allModels [] = [[]]
@@ -60,11 +93,14 @@ allModels (var:vars) = do
     model <- allModels vars
     return (truth : model)
 
-freeVariables :: Expr -> [String]
-freeVariables (Var v) = [v]
-freeVariables (Op _ left right) = freeVariables left ++ freeVariables right
-freeVariables (Not expr) = freeVariables expr
-freeVariables _ = []
+freeVariablesAlg :: ExprF (Set String) -> Set String
+freeVariablesAlg (Var v) = Set.singleton v
+freeVariablesAlg (Op _ freeLeft freeRight) = freeLeft `Set.union` freeRight
+freeVariablesAlg (Not freeVars) = freeVars
+freeVariablesAlg _ = Set.empty
+
+freeVariables :: Expr -> Set String
+freeVariables = fold freeVariablesAlg
 
 -- Rewrite Rules
 {- I don't think I'll need this

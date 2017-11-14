@@ -29,7 +29,8 @@ library
                        Sequent.Term,
                        Sequent.Proof
 
-  build-depends:       base, megaparsec >= 6.0.0, containers, pretty, QuickCheck >= 2.10.0, recursion-schemes, ansi-wl-pprint
+  build-depends:       base, megaparsec >= 6.0.0, containers, pretty, QuickCheck >= 2.10.0,
+                       recursion-schemes, ansi-wl-pprint, deriving-compat
   default-language:    Haskell2010
   extensions:          DeriveFunctor, OverloadedStrings, TemplateHaskell, ScopedTypeVariables
 

@@ -15,7 +15,7 @@ instance IsString Lambda where
   fromString = parseLambda
 
 parseLambda :: String -> Lambda
-parseLambda = fromJust . parseMaybe lambda
+parseLambda = fromJust . parseMaybe lambda . removeAnsiTerminalCodes
 
 type Parser = Parsec Void String
 
@@ -61,3 +61,13 @@ application = do
   func <- nonApplication
   args <- many nonApplication
   return (foldl App func args)
+
+removeAnsiTerminalCodes :: String -> String
+removeAnsiTerminalCodes xs = removeInEscape xs False
+
+removeInEscape :: String -> Bool -> String
+removeInEscape [] _ = []
+removeInEscape ('m'   :xs) True  = removeInEscape xs False
+removeInEscape (x     :xs) True  = removeInEscape xs True
+removeInEscape ('\x1b':xs) False = removeInEscape xs True
+removeInEscape (x     :xs) False = x:removeInEscape xs False

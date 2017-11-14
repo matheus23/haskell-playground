@@ -36,10 +36,36 @@ instance Arbitrary Lambda where
     | name `Set.member` freeVariables body = []
     | otherwise                            = [body]
 
-{- bullshit property hahaaa
+{-
+this one is ALSO wrong...
+
+counterexample: λb. a
+                λb. a /= λb. b
+
 --prop_rename :: Lambda -> Property
 --prop_rename expression =
---  expression === (expression & rename "a" "b" & rename "b" "a")
+  not (Set.member "b" (freeVariables expression)) ==>
+  expression === (expression & rename "a" "b" & rename "b" "a")
+
+
+oh god. even more wrong stuff. I can't do this, since I might have
+free variables that are shadowed when renamed.
+
+counterexample: (λb. a) b /= (λb. b) b
+
+--prop_rename :: Lambda -> Property
+--prop_rename expression =
+  let free = freeVariables expression
+      (free1:free2:_) = Set.toList free
+   in Set.size free >= 2 && not (Set.member "placeholder" free) ==>
+      expression === (expression & switchVars free1 free2 & switchVars free2 free1)
+  where
+    switchVars var1 var2 =
+      rename "placeholder" var2
+      . rename var2 var1
+      . rename var1 "placeholder"
+
+I find it fascinating, how many statements you believe to be true, but aren't!
 -}
 
 prop_renameNotInFreeVariables :: Lambda -> Property
@@ -62,6 +88,11 @@ prop_substitutionRemovesFreeVariable expression substitution =
 prop_parserPrinterIdentity :: Lambda -> Property
 prop_parserPrinterIdentity expression =
   expression === parseLambda (show expression)
+
+-- Any higher linewidths would slow down testing a lot (!)
+prop_parserPrettyPrinterIdentity :: Lambda -> Property
+prop_parserPrettyPrinterIdentity expression =
+  expression === parseLambda (render 20 (pretty expression))
 
 -- Actual Expression tests
 

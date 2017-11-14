@@ -10,12 +10,10 @@ import Data.Void
 import Control.Applicative
 import Data.String
 import Data.Maybe
+import Data.Functor.Foldable
 
 contraposition :: Expr
-contraposition = "(a -> b) <-> (!b -> !a)"
-
-instance IsString Expr where
-  fromString = parseExpr
+contraposition = parseExpr "(a -> b) <-> (!b -> !a)"
 
 parseExpr :: String -> Expr
 parseExpr = fromJust . parseMaybe expr
@@ -35,25 +33,25 @@ inParens :: Parser a -> Parser a
 inParens = between (symbol "(") (symbol ")")
 
 identifier :: Parser Expr
-identifier = Var <$> lexeme (many letterChar)
+identifier = mkVar <$> lexeme (many letterChar)
 
 expr :: Parser Expr
 expr = makeExprParser term operators <?> "expression"
 
 term :: Parser Expr
 term = inParens expr
-  <|> Zero <$ symbol "0"
-  <|> One <$ symbol "1"
+  <|> mkZero <$ symbol "0"
+  <|> mkOne <$ symbol "1"
   <|> identifier
   <?> "term"
 
 operators :: [[Operator Parser Expr]]
 operators =
-  [ [ Prefix (foldr1 (.) <$> some (Not <$ pnot)) ]
-  , [ InfixR (Op And <$ pand) ]
-  , [ InfixR (Op Or <$ por) ]
-  , [ InfixR (Op Equiv <$ pequiv) ]
-  , [ InfixR (Op Imply <$ pimply) ]
+  [ [ Prefix (foldr1 (.) <$> some (mkNot <$ pnot)) ]
+  , [ InfixR (mkAnd <$ pand) ]
+  , [ InfixR (mkOr <$ por) ]
+  , [ InfixR (mkEquiv <$ pequiv) ]
+  , [ InfixR (mkImply <$ pimply) ]
   ]
 
 pnot, por, pand, pequiv, pimply :: Parser String
