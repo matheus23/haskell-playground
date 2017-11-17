@@ -44,7 +44,7 @@ executable lambda-reactive
 executable classic-sequent
   hs-source-dirs:      classic-sequent
   main-is:             Main.hs
-  other-modules:       TermWidget, ProofWidget
+  other-modules:       TermWidget, ProofWidget, React
   build-depends:       playground, base, containers, linear, recursion-schemes,
                        Reactives, DeclarativeGraphics, DeclarativeGraphics-Cairo, DeclarativeGraphics-SDL
   extensions:          DeriveFunctor, OverloadedStrings, TemplateHaskell, ScopedTypeVariables
