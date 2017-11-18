@@ -15,8 +15,10 @@ type Name = String
 
 
 data TypeF a
-  = TypeVar Name
+  = FreeType Name
+  | TypeVar Int Name
   | a :-> a
+  | ForallType Name a
   deriving Functor
 
 infixr :->
@@ -29,9 +31,11 @@ type Type = Fix TypeF
 
 
 data ExprF a
-  = Var Name
+  = FreeVar Name
+  | Var Int Name
   | a :@ a
   | Abs Name Type a
+  | ForallAbs Name a
   deriving Functor
 
 infixl :@
@@ -42,18 +46,7 @@ $(deriveEq1 ''ExprF)
 
 type Expr = Fix ExprF
 
-
-data IndexedExprF a
-  = BoundVar Int Name
-  | Expr (ExprF a)
-  deriving Functor
-
-$(deriveShow1 ''IndexedExprF)
-$(deriveRead1 ''IndexedExprF)
-$(deriveEq1 ''IndexedExprF)
-
-type IndexedExpr = Fix IndexedExprF
-
+{-
 computeIndexedAlg :: ExprF (Map String Int -> IndexedExpr) -> Map String Int -> IndexedExpr
 computeIndexedAlg (Var name) environment =
   case environment !? name of
@@ -66,3 +59,4 @@ computeIndexedAlg (Abs name typ getBody) environment =
 
 computeIndexed :: Expr -> IndexedExpr
 computeIndexed expr = fold computeIndexedAlg expr Map.empty
+-}

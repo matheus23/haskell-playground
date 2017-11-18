@@ -50,11 +50,15 @@ expectMatchingTypes a b =
 
 prettyErr :: TypeCheckError -> String
 prettyErr (UnkownBoundVar index name env) = "Unknown bound variable " ++ show name ++ " (index " ++ show index ++ ")"
-prettyErr (ExpectedFunctionType typ) = "Expected function, but got " ++ render 40 (prettyPrintType typ) ++ " instead"
+prettyErr (ExpectedFunctionType typ) = "Expected function, but got " ++ show (render 40 (prettyPrintType typ)) ++ " instead"
 prettyErr (ArgTypeMismatch funcType argType) =
   "Expected argument of type "
-  ++ render 40 (prettyPrintType funcType)
+  ++ show (render 40 (prettyPrintType funcType))
   ++ ", but actually got an argument of type "
-  ++ render 40 (prettyPrintType argType)
+  ++ show (render 40 (prettyPrintType argType))
   ++ " instead"
 prettyErr (InvalidLiteral name) = "Cannot identify literal " ++ show name
+
+printTC :: TypeCheck Type -> IO ()
+printTC (Left err) = putStrLn (prettyErr err)
+printTC (Right typ) = putStrLn (render 40 (prettyPrintType typ))

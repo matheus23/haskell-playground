@@ -20,7 +20,8 @@ instance Show Value where
   show (Fun _) = "<function>"
 
 data Primitive
-  = Number Integer
+  = Integer Integer
+  | Bool Bool
   deriving Show
 
 interpretString :: String -> IO ()
@@ -51,15 +52,22 @@ interpretAlg _ (Expr (Abs name typ interpretBody)) env =
 interpretAlg interpretFree (Expr (Var name)) env = interpretFree name
 
 std :: Name -> (TypeCheck Type, Value)
-std "+" = primitive "Int -> Int -> Int" $ Prim . Number <$> ((+) <$> integer <*> integer)
-std "-" = primitive "Int -> Int -> Int" $ Prim . Number <$> ((-) <$> integer <*> integer)
-std "*" = primitive "Int -> Int -> Int" $ Prim . Number <$> ((*) <$> integer <*> integer)
-std "//" = primitive "Int -> Int -> Int" $ Prim . Number <$> (div <$> integer <*> integer)
-std "negate" = primitive "Int -> Int" $ Prim . Number <$> (negate <$> integer)
+std "+" = primitive "Int -> Int -> Int" $ Prim . Integer <$> ((+) <$> integer <*> integer)
+std "-" = primitive "Int -> Int -> Int" $ Prim . Integer <$> ((-) <$> integer <*> integer)
+std "*" = primitive "Int -> Int -> Int" $ Prim . Integer <$> ((*) <$> integer <*> integer)
+std "//" = primitive "Int -> Int -> Int" $ Prim . Integer <$> (div <$> integer <*> integer)
+std "negate" = primitive "Int -> Int" $ Prim . Integer <$> (negate <$> integer)
+std "&&" = primitive "Bool -> Bool -> Bool" $ Prim . Bool <$> ((&&) <$> bool <*> bool)
+std "==" = primitive "Int -> Int -> Bool" $ Prim . Bool <$> ((==) <$> integer <*> integer)
+std "if" = primitive "Bool -> Int -> Int -> Int" $ Prim . Integer <$> (runIf <$> bool <*> integer <*> integer)
 std literal =
   case listToMaybe (map fst ((reads :: ReadS Integer) literal)) of
-    Just num -> primitive "Int" (pure $ Prim $ Number num)
+    Just num -> primitive "Int" (pure $ Prim $ Integer num)
     Nothing -> error $ "Unkown literal: " ++ show literal
+
+runIf :: Bool -> Integer -> Integer -> Integer
+runIf True l _ = l
+runIf False _ r = r
 
 stdTypes :: Name -> TypeCheck Type
 stdTypes = fst . std
@@ -85,7 +93,7 @@ instance Monad FromValue where
     ValueFunc $ \value ->
       case func value of
         Pure a -> f a
-        ValueFunc next -> error "Expected no more arguments"
+        ValueFunc _ -> error "Expected no more arguments"
 
 instance Applicative FromValue where
   (<*>) = ap
@@ -95,5 +103,12 @@ integer :: FromValue Integer
 integer =
   ValueFunc $ \value ->
     case value of
-      Prim (Number i) -> Pure i
+      Prim (Integer i) -> Pure i
       _ -> error "Expected an integer"
+
+bool :: FromValue Bool
+bool =
+  ValueFunc $ \value ->
+    case value of
+      Prim (Bool b) -> Pure b
+      _ -> error "Expected a bool"

@@ -10,22 +10,25 @@ import Data.String
 import Control.Monad (void)
 import Control.Applicative
 import Data.Functor.Foldable
+import qualified Data.Map as Map
+import Data.Map (Map, (!?))
 
 import Typed.Lambda
 
 parseExpr :: String -> Expr
 parseExpr str =
-  case runParser lambda "<interactive>" (removeAnsiTerminalCodes str) of
+  case runParser (lambda (Map.empty, Map.empty)) "<interactive>" (removeAnsiTerminalCodes str) of
     Right expr -> expr
     Left err -> error $ "Parsing error: " ++ show err
 
 parseType :: String -> Type
 parseType str =
-  case runParser typ "<interactive>" (removeAnsiTerminalCodes str) of
+  case runParser (typ Map.empty) "<interactive>" (removeAnsiTerminalCodes str) of
     Right typ -> typ
     Left err -> error $ "Parsing error: " ++ show err
 
 type Parser = Parsec Void String
+type Env = (Map Name Int, Map Name Int)
 
 sc :: Parser ()
 sc = L.space space1 empty empty
@@ -45,28 +48,48 @@ name = lexeme (some (oneOf identifierChars))
 identifierChars :: String
 identifierChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'+-*/$%&|><=?!#"
 
-lambda :: Parser Expr
-lambda =
-  makeFixApp <$> application (nonApplication lambda)
-  <|> nonApplication lambda
+lambda :: Env -> Parser Expr
+lambda envs =
+  makeFixApp <$> application (nonApplication envs)
+  <|> nonApplication envs
   where
     makeFixApp (x, xs) = foldl (\a b -> Fix (a :@ b)) x xs
 
-nonApplication :: Parser Expr -> Parser Expr
-nonApplication parseInner =
-  Fix <$> abstraction parseInner
-  <|> inParens parseInner
-  <|> Fix . Var <$> name
+nonApplication :: Env -> Parser Expr
+nonApplication (typeEnv, valueEnv) =
+  abstraction (typeEnv, valueEnv)
+  <|> forallAbs (typeEnv, valueEnv)
+  <|> inParens (lambda (typeEnv, valueEnv))
+  <|> constructVar <$> name
+  where
+    constructVar name =
+      case valueEnv !? name of
+        Just index -> Fix (Var index name)
+        Nothing -> Fix (FreeVar name)
 
-abstraction :: Parser a -> Parser (ExprF a)
-abstraction parseInner = do
+abstraction :: Env -> Parser Expr
+abstraction (typeEnv, valueEnv) = do
   symbol "\\" <|> symbol "λ"
   arg <- name
   symbol ":"
-  t <- typ
+  t <- typ typeEnv
   symbol "."
-  body <- parseInner
-  return (Abs arg t body)
+  body <- lambda (typeEnv, advanceEnv arg valueEnv)
+  return (Fix (Abs arg t body))
+
+forallSymbol :: Parser ()
+forallSymbol = symbol "/\\" <|> symbol "Λ" >> return ()
+
+forallAbs :: Env -> Parser Expr
+forallAbs (typeEnv, valueEnv) = do
+  forallSymbol
+  n <- name
+  symbol "."
+  body <- lambda (advanceEnv n typeEnv, valueEnv)
+  return (Fix (ForallAbs n body))
+
+advanceEnv :: Name -> Map Name Int -> Map Name Int
+advanceEnv introduced = Map.insert introduced 0 . fmap (+ 1)
 
 application :: Parser a -> Parser (a, [a])
 application parseNonApp = do
@@ -74,12 +97,28 @@ application parseNonApp = do
   args <- many parseNonApp
   return (func, args)
 
-typ :: Parser Type
-typ = makeExprParser term operators <?> "type"
+typ :: Map Name Int -> Parser Type
+typ typeEnv =
+  forallType typeEnv
+  <|> makeExprParser (term typeEnv) operators <?> "type"
 
-term :: Parser Type
-term = inParens typ
-  <|> (Fix . TypeVar <$> name) <?> "type variable"
+forallType :: Map Name Int -> Parser Type
+forallType typeEnv = do
+  symbol "/\\" <|> symbol "Λ"
+  n <- name
+  symbol "."
+  t <- typ (advanceEnv n typeEnv)
+  return (Fix (ForallType n t))
+
+term :: Map Name Int -> Parser Type
+term typeEnv =
+  inParens (typ typeEnv)
+  <|> constructTypeVar <$> name <?> "type variable"
+  where
+    constructTypeVar name =
+      case typeEnv !? name of
+        Just index -> Fix (TypeVar index name)
+        Nothing -> Fix (FreeType name)
 
 operators :: [[Operator Parser Type]]
 operators =
