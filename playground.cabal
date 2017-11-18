@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Logic, Lambda, Sequent, Infinity, Zippers
+  exposed-modules:     Logic, Lambda, Sequent, Infinity, Zippers, SExpr
   other-modules:       Lambda.Expressions,
                        Lambda.Interpreter,
                        Lambda.Parser,
@@ -27,7 +27,11 @@ library
                        Logic.Propositional,
                        Logic.Test,
                        Sequent.Term,
-                       Sequent.Proof
+                       Sequent.Proof,
+                       SExpr.Parser,
+                       SExpr.Types,
+                       SExpr.PrettyPrint,
+                       SExpr.Test
 
   build-depends:       base, megaparsec >= 6.0.0, containers, pretty, QuickCheck >= 2.10.0,
                        recursion-schemes, ansi-wl-pprint, deriving-compat
