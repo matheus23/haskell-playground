@@ -1,0 +1,18 @@
+( λ cons : Int -> ((Int -> Int -> Int) -> Int -> Int) -> ((Int -> Int -> Int) -> Int -> Int) .
+  λ nil : (Int -> Int -> Int) -> Int -> Int .
+  λ product : ((Int -> Int -> Int) -> Int -> Int) -> Int .
+  
+)
+
+( λ head : Int .
+  λ tail : ((Int -> Int -> Int) -> Int -> Int) .
+    λ f : Int -> Int -> Int .
+    λ z : Int .
+      f head (tail f z) )
+
+( λ f : Int -> Int -> Int .
+  λ z : Int .
+    z )
+
+( λ list : (Int -> Int -> Int) -> Int -> Int .
+    list * 1 )
