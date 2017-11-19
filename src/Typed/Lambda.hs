@@ -12,30 +12,14 @@ import Data.Map (Map, (!?))
 
 type Name = String
 
-
-
-data TypeF a
-  = FreeType Name
-  | TypeVar Int Name
-  | a :-> a
-  | ForallType Name a
-  deriving Functor
-
-infixr :->
-
-$(deriveShow1 ''TypeF)
-$(deriveRead1 ''TypeF)
-$(deriveEq1 ''TypeF)
-
-type Type = Fix TypeF
-
-
 data ExprF a
-  = FreeVar Name
-  | Var Int Name
+  = Type
+  | Kind
+  | FreeVar Name
+  | BoundVar Int Name
   | a :@ a
-  | Abs Name Type a
-  | ForallAbs Name a
+  | Lambda Name (ExprF a) a
+  | Pi Name (ExprF a) a
   deriving Functor
 
 infixl :@

@@ -1,18 +1,33 @@
-( λ cons : Int -> ((Int -> Int -> Int) -> Int -> Int) -> ((Int -> Int -> Int) -> Int -> Int) .
-  λ nil : (Int -> Int -> Int) -> Int -> Int .
+( λ cons : ∀ a . a -> ((a -> a -> a) -> a -> a) -> ((a -> a -> a) -> a -> a) .
+  λ nil : ∀ a . (a -> a -> a) -> a -> a .
   λ product : ((Int -> Int -> Int) -> Int -> Int) -> Int .
-  
+  λ zero : ∀ a . (a -> a) -> a -> a .
+  λ succ : ∀ a . (a -> a) -> a -> a -> ((a -> a) -> a -> a) .
+  0
 )
 
-( λ head : Int .
-  λ tail : ((Int -> Int -> Int) -> Int -> Int) .
-    λ f : Int -> Int -> Int .
-    λ z : Int .
-      f head (tail f z) )
+( Λ a .
+  λ head : a .
+  λ tail : ((a -> a -> a) -> a -> a) .
+    λ f : a -> a -> a .
+    λ acc : a .
+      f head (tail f acc) )
 
-( λ f : Int -> Int -> Int .
-  λ z : Int .
-    z )
+( Λ a .
+  λ f : a -> a -> a .
+  λ acc : a .
+    acc )
 
 ( λ list : (Int -> Int -> Int) -> Int -> Int .
     list * 1 )
+
+( Λ a .
+  λ f : a -> a .
+  λ z : a .
+    z )
+
+( Λ a .
+  λ num : (a -> a) -> a -> a .
+    λ f : a -> a .
+    λ z : a .
+      f (num f z) )
