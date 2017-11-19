@@ -1,0 +1,8 @@
+( λ Bool : Type .
+    λ bool : Bool .
+    λ c : Type .
+    λ t : c .
+    λ f : c .
+      bool c f t )
+
+(∀ a . Π _ : a . Π _ : a . a)
