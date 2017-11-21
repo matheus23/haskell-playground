@@ -85,18 +85,3 @@ replaceAlg (Pi name replaceType replaceBody) replaceIndex replacement =
 replaceAlg (func :@ arg) ind repl = Fix (func ind repl :@ arg ind repl)
 replaceAlg (Const c) _ _ = Fix (Const c)
 replaceAlg (FreeVar name) _ _ = Fix (FreeVar name)
-
-{-
-computeIndexedAlg :: ExprF (Map String Int -> IndexedExpr) -> Map String Int -> IndexedExpr
-computeIndexedAlg (Var name) environment =
-  case environment !? name of
-    Just index -> Fix (BoundVar index name)
-    Nothing    -> Fix (Expr (Var name))
-computeIndexedAlg (getFunc :@ getArg) environment =
-  Fix (Expr (getFunc environment :@ getArg environment))
-computeIndexedAlg (Abs name typ getBody) environment =
-  Fix (Expr (Abs name typ (getBody (Map.insert name 0 (fmap (+ 1) environment)))))
-
-computeIndexed :: Expr -> IndexedExpr
-computeIndexed expr = fold computeIndexedAlg expr Map.empty
--}

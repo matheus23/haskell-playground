@@ -53,7 +53,7 @@ advanceEnv :: Name -> IndexEnv -> IndexEnv
 advanceEnv introduced = Map.insert introduced 0 . fmap (+ 1)
 
 sc :: Parser ()
-sc = L.space space1 empty empty
+sc = L.space space1 (L.skipLineComment "--") (L.skipBlockCommentNested "{-" "-}")
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
