@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 module Typed.Parser where
 
 import Text.Megaparsec
@@ -5,10 +6,10 @@ import Text.Megaparsec.Expr
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Data.Void
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, maybe)
 import Data.String
 import Control.Monad (void)
-import Control.Applicative
+import Control.Applicative hiding (Const)
 import Data.Functor.Foldable
 import qualified Data.Map as Map
 import Data.Map (Map, (!?))
@@ -17,12 +18,39 @@ import Typed.Lambda
 
 parseExpr :: String -> Expr
 parseExpr str =
-  case runParser (expr Map.empty) "<interactive>" (removeAnsiTerminalCodes str) of
+  case runParser expr "<interactive>" (removeAnsiTerminalCodes str) of
     Right expr -> expr
     Left err -> error $ "Parsing error: " ++ show err
 
 type Parser = Parsec Void String
-type Env = Map Name Int
+type IndexEnv = Map Name Int
+
+data ParsedExpr
+  = PType
+  | PVar Name
+  | PLambda Name ParsedExpr ParsedExpr
+  | PPi Name ParsedExpr ParsedExpr
+  | PApp ParsedExpr ParsedExpr
+  | PArrow ParsedExpr ParsedExpr
+  deriving (Show, Eq, Read)
+
+computeExpr :: IndexEnv -> ParsedExpr -> Expr
+computeExpr env PType = Fix (Const Type)
+computeExpr env (PVar name) = Fix (maybe (FreeVar name) (flip BoundVar name) (env !? name))
+computeExpr env (PLambda name typ body) =
+  let t = computeExpr env typ
+  in Fix (Lambda name t (computeExpr (advanceEnv name env) body))
+computeExpr env (PPi name typ body) =
+  let t = computeExpr env typ
+  in Fix (Pi name t (computeExpr (advanceEnv name env) body))
+computeExpr env (PApp func arg) =
+  Fix (computeExpr env func :@ computeExpr env arg)
+computeExpr env (PArrow arg res) =
+  let t = computeExpr env arg
+  in Fix (Pi "_" t (computeExpr (advanceEnv "_" env) res))
+
+advanceEnv :: Name -> IndexEnv -> IndexEnv
+advanceEnv introduced = Map.insert introduced 0 . fmap (+ 1)
 
 sc :: Parser ()
 sc = L.space space1 empty empty
@@ -37,49 +65,48 @@ inParens :: Parser a -> Parser a
 inParens = between (symbol "(") (symbol ")")
 
 name :: Parser Name
-name = lexeme (some (oneOf identifierChars))
+name = lexeme (some (oneOf identifierChars)) -- TODO: Disallow "->" as name
 
 identifierChars :: String
 identifierChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'+-*/$%&|><=?!#"
 
-expr :: Env -> Parser Expr
-expr env =
+expr :: Parser Expr
+expr = computeExpr Map.empty <$> parsedExpr
+
+parsedExpr :: Parser ParsedExpr
+parsedExpr =
+  makeExprParser nonInfixExpr operators
+  <|> nonInfixExpr
+
+nonInfixExpr :: Parser ParsedExpr
+nonInfixExpr =
   constants
-  <|> makeFixApp <$> application (nonApplication env)
-  <|> nonApplication env
-  -- <|> makeExprParser (term typeEnv) operators
+  <|> makeFixApp <$> application nonApplication
+  <|> nonApplication
   where
-    makeFixApp (x, xs) = foldl (\a b -> Fix (a :@ b)) x xs
+    makeFixApp (x, xs) = foldl PApp x xs
 
-constants :: Parser Expr
+constants :: Parser ParsedExpr
 constants =
-  Fix Type <$ symbol "Type"
+  PType <$ symbol "Type"
 
-nonApplication :: Env -> Parser Expr
-nonApplication env =
-  abstraction env (symbol "\\" <|> symbol "λ") Lambda
-  <|> abstraction env (symbol "|~|" <|> symbol "Π") Pi
-  <|> forallType env
-  <|> inParens (expr env)
-  <|> constructVar <$> name
-  where
-    constructVar name =
-      case env !? name of
-        Just index -> Fix (BoundVar index name)
-        Nothing -> Fix (FreeVar name)
+nonApplication :: Parser ParsedExpr
+nonApplication =
+  abstraction (symbol "\\" <|> symbol "λ") PLambda
+  <|> abstraction (symbol "|~|" <|> symbol "Π") PPi
+  <|> forallType
+  <|> inParens parsedExpr
+  <|> PVar <$> name
 
-abstraction :: Env -> Parser String -> (Name -> ExprF Expr -> Expr -> ExprF Expr) -> Parser Expr
-abstraction env abstractionSymbol abstract = do
+abstraction :: Parser String -> (Name -> ParsedExpr -> ParsedExpr -> ParsedExpr) -> Parser ParsedExpr
+abstraction abstractionSymbol abstract = do
   abstractionSymbol
   arg <- name
   symbol ":"
-  (Fix t) <- expr env
+  t <- parsedExpr
   symbol "."
-  body <- expr (advanceEnv arg env)
-  return (Fix (abstract arg t body))
-
-advanceEnv :: Name -> Map Name Int -> Map Name Int
-advanceEnv introduced = Map.insert introduced 0 . fmap (+ 1)
+  body <- parsedExpr
+  return (abstract arg t body)
 
 application :: Parser a -> Parser (a, [a])
 application parseNonApp = do
@@ -87,35 +114,17 @@ application parseNonApp = do
   args <- many parseNonApp
   return (func, args)
 
-forallType :: Map Name Int -> Parser Expr
-forallType env = do
-  symbol "\\/" <|> symbol "∀"
+forallType :: Parser ParsedExpr
+forallType = do
+  symbol "forall" <|> symbol "∀"
   n <- name
   symbol "."
-  t <- expr (advanceEnv n env)
-  return (Fix (Pi n Type t))
+  t <- parsedExpr
+  return (PPi n PType t)
 
-{-
-typ :: Map Name Int -> Parser Type
-typ typeEnv =
-  forallType typeEnv
-  <|> makeExprParser (term typeEnv) operators <?> "type"
-
-term :: Map Name Int -> Parser Expr
-term typeEnv =
-  inParens (typ typeEnv)
-  <|> constructTypeVar <$> name <?> "type variable"
-  where
-    constructTypeVar name =
-      case typeEnv !? name of
-        Just index -> Fix (TypeVar index name)
-        Nothing -> Fix (FreeType name)
-
-operators :: [[Operator Parser Expr]]
+operators :: [[Operator Parser ParsedExpr]]
 operators =
-  [ [ InfixR (mkArrow <$ arrow) ] ]
-  where mkArrow l r = Fix (Pi "_" l r)
--}
+  [ [ InfixR (PArrow <$ arrow) ] ]
 
 arrow :: Parser String
 arrow = symbol "->" <|> symbol "→"

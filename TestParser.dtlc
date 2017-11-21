@@ -1,8 +1,31 @@
-( λ Bool : Type .
-    λ bool : Bool .
-    λ c : Type .
-    λ t : c .
-    λ f : c .
-      bool c f t )
+( λ Nat : Type .
+  λ foldNat : Nat → (∀ a . (a → a) → a → a) .
+  ( λ succ : Nat → Nat .
+    λ zero : Nat .
+    λ plus : Nat → Nat → Nat .
+      plus
+        (succ (succ (succ zero)))
+        (succ (succ zero)) )
 
-(∀ a . Π _ : a . Π _ : a . a)
+  ( λ n : Nat .
+      λ a : Type .
+      λ f : a → a .
+      λ z : a .
+        f (foldNat n a f z) )
+
+  ( λ a : Type .
+    λ f : a → a .
+    λ z : a .
+      z )
+
+  ( λ lhs : Nat .
+    λ rhs : Nat .
+      λ a : Type .
+      λ f : a → a .
+      λ z : a .
+        foldNat lhs a f (foldNat rhs a f z) )
+)
+
+( ∀ a . (a → a) → a → a )
+
+( λ nat : (∀ a . (a → a) → a → a) . nat )

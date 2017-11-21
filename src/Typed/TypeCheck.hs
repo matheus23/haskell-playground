@@ -9,56 +9,83 @@ import Typed.PrettyPrint
 
 type TypeCheck = Either TypeCheckError
 
+type Env = Map Int Expr
+
 data TypeCheckError
-  = UnkownBoundVar Int Name (Map Int Type)
-  | ExpectedFunctionType Type
-  | ArgTypeMismatch Type Type
+  = UnkownBoundVar Int Name Env
+  | ExpectedPiType Expr
+  | ArgTypeMismatch Expr Expr
   | InvalidLiteral Name
+  | TypeOfKind
+  | ExpectedTypeOrKind Expr
+  | IllegalDependency Const Const
   deriving (Show, Eq)
 
+resultingDependency :: Const -> Const -> TypeCheck Const
+resultingDependency Type Kind = return Kind -- value results in type, i.e. "Vec n", where n is a natural number
+resultingDependency Type Type = return Type -- value depends on another value. Just ordinary functions
+resultingDependency Kind Kind = return Kind -- type results in type. For example "List" (* -> *) or (Type -> Type) is allowed
+-- We disallow a value depending on a type. For example:
+-- numBits : Type -> Int
+-- numBits t =
+--   case t of
+--     Int -> 64
+--     Bool -> 1
+--     _ -> -1
+resultingDependency Kind Type = Left (IllegalDependency Kind Type)
 
-typeCheck :: (Name -> TypeCheck Type) -> IndexedExpr -> TypeCheck Type
-typeCheck typeCheckFree expr = fold (typeCheckAlg typeCheckFree) expr Map.empty
+typeCheck :: (Name -> TypeCheck Expr) -> Expr -> TypeCheck Expr
+typeCheck typeCheckFree expr = para (typeCheckAlg typeCheckFree) expr Map.empty
 
-typeCheckAlg :: (Name -> TypeCheck Type) -> IndexedExprF (Map Int Type -> TypeCheck Type) -> Map Int Type -> TypeCheck Type
-typeCheckAlg _ (BoundVar i name) env = lookupEnv env i name
-typeCheckAlg _ (Expr (getFuncType :@ getArgType)) env = do
-  funcType <- getFuncType env
-  (funcArgType, funcResultType) <- expectArrowType funcType
-  argType <- getArgType env
-  expectMatchingTypes funcArgType argType
-  return funcResultType
-typeCheckAlg _ (Expr (Abs name typ getBodyType)) env = do
-  let newEnv = Map.insert 0 typ (Map.mapKeys (+ 1) env)
-  bodyType <- getBodyType newEnv
-  return (Fix (typ :-> bodyType))
-typeCheckAlg typeCheckFree (Expr (Var name)) env = typeCheckFree name
+typeCheckAlg :: (Name -> TypeCheck Expr) -> ExprF (Expr, Env -> TypeCheck Expr) -> Env -> TypeCheck Expr
+typeCheckAlg typeOfFree expr env =
+  case expr of
+    (FreeVar name) -> typeOfFree name
+    (BoundVar index name) -> lookupEnv env index name
+    (Const Type) -> return (Fix (Const Kind))
+    (Const Kind) -> Left TypeOfKind
+    (_, typeOfFunc) :@ (_, typeOfArg) -> do
+      (Pi name typ resType) <- expectPiType =<< weakHeadNormalForm <$> typeOfFunc env
+      argType <- typeOfArg env
+      return (substitution argType resType)
+    (Lambda name (argType, typeCheckArgType) (_, typeOfBody)) -> do
+      _ <- typeCheckArgType env
+      bodyType <- typeOfBody (insertEnv argType env)
+      return (Fix (Pi name argType bodyType))
+    (Pi name (argType, typeOfArg) (_, typeOfRes)) -> do
+      argTypeOrKind <- expectTypeOrKind =<< weakHeadNormalForm <$> typeOfArg env
+      let env' = insertEnv (Fix (Const argTypeOrKind)) env
+      resTypeOrKind <- expectTypeOrKind =<< weakHeadNormalForm <$> typeOfRes env'
+      Fix . Const <$> resultingDependency argTypeOrKind resTypeOrKind
 
-lookupEnv :: Map Int Type -> Int -> Name -> TypeCheck Type
+insertEnv :: Expr -> Env -> Env
+insertEnv expr = Map.insert 0 expr . Map.mapKeys (+ 1)
+
+expectPiType :: Expr -> TypeCheck (ExprF Expr)
+expectPiType (Fix pi@Pi{}) = return pi
+expectPiType other = Left (ExpectedPiType other)
+
+expectTypeOrKind :: Expr -> TypeCheck Const
+expectTypeOrKind (Fix (Const c)) = return c
+expectTypeOrKind other = Left (ExpectedTypeOrKind other)
+
+lookupEnv :: Map Int Expr -> Int -> Name -> TypeCheck Expr
 lookupEnv env i name =
   case env !? i of
     Nothing -> Left (UnkownBoundVar i name env)
     Just typ -> return typ
 
-expectArrowType :: Type -> TypeCheck (Type, Type)
-expectArrowType (Fix (arg :-> res)) = return (arg, res)
-expectArrowType t = Left (ExpectedFunctionType t)
-
-expectMatchingTypes :: Type -> Type -> TypeCheck ()
-expectMatchingTypes a b =
-  if a == b then return () else Left (ArgTypeMismatch a b)
-
 prettyErr :: TypeCheckError -> String
 prettyErr (UnkownBoundVar index name env) = "Unknown bound variable " ++ show name ++ " (index " ++ show index ++ ")"
-prettyErr (ExpectedFunctionType typ) = "Expected function, but got " ++ show (render 40 (prettyPrintType typ)) ++ " instead"
+prettyErr (ExpectedPiType typ) = "Expected function, but got " ++ show (render 40 (prettyPrintExpr typ)) ++ " instead"
 prettyErr (ArgTypeMismatch funcType argType) =
   "Expected argument of type "
-  ++ show (render 40 (prettyPrintType funcType))
+  ++ show (render 40 (prettyPrintExpr funcType))
   ++ ", but actually got an argument of type "
-  ++ show (render 40 (prettyPrintType argType))
+  ++ show (render 40 (prettyPrintExpr argType))
   ++ " instead"
 prettyErr (InvalidLiteral name) = "Cannot identify literal " ++ show name
 
-printTC :: TypeCheck Type -> IO ()
+printTC :: TypeCheck Expr -> IO ()
 printTC (Left err) = putStrLn (prettyErr err)
-printTC (Right typ) = putStrLn (render 40 (prettyPrintType typ))
+printTC (Right typ) = putStrLn (render 40 (prettyPrintExpr typ))

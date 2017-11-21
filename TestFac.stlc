@@ -3,8 +3,10 @@
   λ product : ((Int -> Int -> Int) -> Int -> Int) -> Int .
   λ zero : ∀ a . (a -> a) -> a -> a .
   λ succ : ∀ a . (a -> a) -> a -> a -> ((a -> a) -> a -> a) .
-  0
+
 )
+
+ntimes : ∀ a . Int -> (a -> a) -> a -> a
 
 ( Λ a .
   λ head : a .
