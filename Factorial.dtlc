@@ -1,0 +1,61 @@
+( λ Nat : Type
+. λ foldNat : Nat → (∀ a . (a → a) → a → a)
+. λ mkNat : (∀ a . (a → a) → a → a) → Nat
+.
+  ( λ nat->Int : Nat → Int
+  . λ succ : Nat → Nat
+  . λ zero : Nat
+  . λ plus : Nat → Nat → Nat
+  .
+    ( λ mult : Nat → Nat → Nat
+    . nat->Int
+        (mult
+          (succ (succ (succ zero)))
+          (succ (succ zero))) )
+
+    -- mult
+    ( λ lhs : Nat
+    . λ rhs : Nat
+      . foldNat lhs Nat (plus rhs) zero )
+  )
+
+  -- nat->Int
+  ( λ n : Nat
+  . foldNat n Int (λ x : Int . + 1 x) 0 )
+
+  -- succ
+  ( λ n : Nat
+  . mkNat
+    ( λ a : Type
+    . λ f : a → a
+    . λ z : a
+      . f (foldNat n a f z)
+    )
+  )
+
+  -- zero
+  ( mkNat
+    ( λ a : Type
+    . λ f : a → a
+    . λ z : a
+      . z ) )
+
+  -- plus
+  ( λ lhs : Nat
+  . λ rhs : Nat
+    . mkNat
+      ( λ a : Type
+      . λ f : a → a
+      . λ z : a
+        . foldNat lhs a f (foldNat rhs a f z) )
+  )
+)
+
+-- Nat
+( ∀ a . (a → a) → a → a )
+
+-- foldNat
+( λ nat : (∀ a . (a → a) → a → a) . nat )
+
+-- mkNat
+( λ fold : (∀ a . (a → a) → a → a) . fold )

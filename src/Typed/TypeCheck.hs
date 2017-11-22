@@ -19,21 +19,16 @@ data TypeCheckError
   | InvalidLiteral Name
   | TypeOfKind
   | ExpectedTypeOrKind Expr
-  | IllegalDependency Const Const
+  | IllegalDependency Expr Const Const
   deriving (Show, Eq)
 
-resultingDependency :: Const -> Const -> TypeCheck Const
-resultingDependency Type Kind = return Kind -- value results in type, i.e. "Vec n", where n is a natural number
-resultingDependency Type Type = return Type -- value depends on another value. Just ordinary functions
-resultingDependency Kind Kind = return Kind -- type results in type. For example "List" (* -> *) or (Type -> Type) is allowed
--- We disallow a value depending on a type. For example:
--- numBits : Type -> Int
--- numBits t =
---   case t of
---     Int -> 64
---     Bool -> 1
---     _ -> -1
-resultingDependency Kind Type = Left (IllegalDependency Kind Type)
+-- lets not allow mixing values and types for now:
+resultingDependency :: Expr -> Const -> Const -> TypeCheck Const
+--resultingDependency expr Type Kind = return Kind -- value results in type, i.e. "Vec n", where n is a natural number
+resultingDependency expr Type Kind = Left (IllegalDependency expr Type Kind) -- we disallow it for now. With that we get System Fω
+resultingDependency expr Type Type = return Type -- value depends on another value. Just ordinary functions
+resultingDependency expr Kind Kind = return Kind -- type results in type (type operators). For example "List" (* -> *) or (Type -> Type) is allowed
+resultingDependency expr Kind Type = return Type -- This allows polymorphism (i.e. ∀ (a : Type) . a), left side has type Kind, right side Type
 
 typeCheck :: (Name -> TypeCheck Expr) -> Expr -> TypeCheck Expr
 typeCheck typeCheckFree expr = para (typeCheckAlg typeCheckFree) expr Map.empty
@@ -58,11 +53,11 @@ typeCheckAlg typeOfFree expr env =
       bodyType <- typeOfBody (insertEnv argType env)
       return (Fix (Pi name argType bodyType))
 
-    (Pi name (argType, typeOfArg) (_, typeOfRes)) -> do
+    (Pi name (argType, typeOfArg) (resType, typeOfRes)) -> do
       argTypeOrKind <- expectTypeOrKind =<< weakHeadNormalForm <$> typeOfArg env
-      let env' = insertEnv (Fix (Const argTypeOrKind)) env
+      let env' = insertEnv argType env
       resTypeOrKind <- expectTypeOrKind =<< weakHeadNormalForm <$> typeOfRes env'
-      Fix . Const <$> resultingDependency argTypeOrKind resTypeOrKind
+      Fix . Const <$> resultingDependency (Fix (fst <$> expr)) argTypeOrKind resTypeOrKind
 
 insertEnv :: Expr -> Env -> Env
 insertEnv expr = Map.insert 0 (shiftFree 1 expr) . Map.mapKeys (+ 1) . fmap (shiftFree 1)
@@ -92,6 +87,12 @@ prettyErr (ArgTypeMismatch expr funcType argType) =
   ++ "\nin Expression: "
   ++ show expr
 prettyErr (InvalidLiteral name) = "Cannot identify literal " ++ show name
+prettyErr TypeOfKind = "Cannot get the type of a Kind"
+prettyErr (ExpectedTypeOrKind expr) = "Expected something that is a type or a kind: " ++ show expr
+prettyErr (IllegalDependency expr left right) = "This type system does not allow dependencies from " ++ show left ++ " to " ++ show right
+  ++ "\nin expression: " ++ show expr
+
+
 
 printTC :: TypeCheck Expr -> IO ()
 printTC (Left err) = putStrLn (prettyErr err)
