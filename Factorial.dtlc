@@ -1,6 +1,10 @@
 ( λ Nat : Type
 . λ foldNat : Nat → (∀ a . (a → a) → a → a)
 . λ mkNat : (∀ a . (a → a) → a → a) → Nat
+
+. λ List : Type → Type
+. λ foldList : (∀ a . List a → ∀ b . (a → b → b) → b → b)
+. λ mkList : (∀ a . (∀ b . (a → b → b) → b → b) → List a)
 .
   ( λ nat->Int : Nat → Int
   . λ succ : Nat → Nat
@@ -59,3 +63,17 @@
 
 -- mkNat
 ( λ fold : (∀ a . (a → a) → a → a) . fold )
+
+
+-- List
+( λ a : Type . (∀ b . (a → b → b) → b → b) )
+
+-- foldList
+( λ a : Type
+. λ list : (∀ b . (a → b → b) → b → b)
+  . list )
+
+-- mkList
+( λ a : Type
+. λ fold : (∀ b . (a → b → b) → b → b)
+  . fold )

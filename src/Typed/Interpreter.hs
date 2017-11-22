@@ -36,7 +36,7 @@ interpretString str =
           putStrLn $ "Has type: " ++ render 40 (prettyPrintExpr typ)
           print $ interpret stdValues parsed
         Left error ->
-          putStrLn $ prettyErr error
+          print $ prettyErr error
 
 interpret :: (Name -> Value) -> Expr -> Value
 interpret interpretFree expr = para (interpretAlg interpretFree) expr Map.empty

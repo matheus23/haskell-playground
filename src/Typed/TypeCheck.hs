@@ -1,5 +1,6 @@
 module Typed.TypeCheck where
 
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 import Data.Functor.Foldable
 import qualified Data.Map as Map
 import Data.Map (Map, (!?))
@@ -44,7 +45,7 @@ typeCheckAlg typeOfFree expr env =
     (func, typeOfFunc) :@ (arg, typeOfArg) -> do
       (Pi name expectedArgType resType) <- expectPiType =<< weakHeadNormalForm <$> typeOfFunc env
       actualArgType <- typeOfArg env
-      when (actualArgType /= expectedArgType)
+      unless (betaEquivalent actualArgType expectedArgType)
         (Left (ArgTypeMismatch (Fix (func :@ arg)) expectedArgType actualArgType))
       return (substitution arg resType)
 
@@ -58,6 +59,10 @@ typeCheckAlg typeOfFree expr env =
       let env' = insertEnv argType env
       resTypeOrKind <- expectTypeOrKind =<< weakHeadNormalForm <$> typeOfRes env'
       Fix . Const <$> resultingDependency (Fix (fst <$> expr)) argTypeOrKind resTypeOrKind
+
+betaEquivalent :: Expr -> Expr -> Bool
+betaEquivalent lhs rhs =
+  normalize lhs == normalize rhs -- TODO
 
 insertEnv :: Expr -> Env -> Env
 insertEnv expr = Map.insert 0 (shiftFree 1 expr) . Map.mapKeys (+ 1) . fmap (shiftFree 1)
@@ -76,24 +81,28 @@ lookupEnv env i name =
     Nothing -> Left (UnkownBoundVar i name env)
     Just typ -> return typ
 
-prettyErr :: TypeCheckError -> String
-prettyErr (UnkownBoundVar index name env) = "Unknown bound variable " ++ show name ++ " (index " ++ show index ++ ")"
-prettyErr (ExpectedPiType typ) = "Expected function, but got " ++ show (render 40 (prettyPrintExpr typ)) ++ " instead"
+prettyErr :: TypeCheckError -> Doc
+prettyErr (UnkownBoundVar index name env) =
+  "Unknown bound variable" <+> string (show name) <+> "(index" <+> int index <> ")"
+prettyErr (ExpectedPiType typ) =
+  "Expected function, but got" <> group (line <> prettyPrintExpr typ <> line) <> "instead"
 prettyErr (ArgTypeMismatch expr funcType argType) =
-  " Function expects: "
-  ++ show funcType
-  ++ "\nArgument has type: "
-  ++ show argType
-  ++ "\nin Expression: "
-  ++ show expr
-prettyErr (InvalidLiteral name) = "Cannot identify literal " ++ show name
-prettyErr TypeOfKind = "Cannot get the type of a Kind"
-prettyErr (ExpectedTypeOrKind expr) = "Expected something that is a type or a kind: " ++ show expr
-prettyErr (IllegalDependency expr left right) = "This type system does not allow dependencies from " ++ show left ++ " to " ++ show right
-  ++ "\nin expression: " ++ show expr
-
-
+  " Function expects:"
+  <+> align (prettyPrintExpr funcType) <> line
+  <> "Argument has type:"
+  <+> align (prettyPrintExpr argType) <> line
+  <> "in Expression:"
+  <+> align (prettyPrintExpr expr)
+prettyErr (InvalidLiteral name) =
+  "Cannot identify literal" <+> string (show name)
+prettyErr TypeOfKind =
+  "Cannot get the type of a Kind"
+prettyErr (ExpectedTypeOrKind expr) =
+  "Expected something that is a type or a kind:" <> softline <> prettyPrintExpr expr
+prettyErr (IllegalDependency expr left right) =
+  "This type system does not allow dependencies from" <+> string (show left) <+> "to" <+> string (show right)
+  <> line <> "in expression:" <+> align (prettyPrintExpr expr)
 
 printTC :: TypeCheck Expr -> IO ()
-printTC (Left err) = putStrLn (prettyErr err)
-printTC (Right typ) = putStrLn (render 40 (prettyPrintExpr typ))
+printTC (Left err) = print (prettyErr err)
+printTC (Right typ) = print (prettyPrintExpr typ)
