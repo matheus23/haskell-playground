@@ -5,27 +5,66 @@
 . λ List : Type → Type
 . λ foldList : (∀ a . List a → ∀ b . (a → b → b) → b → b)
 . λ mkList : (∀ a . (∀ b . (a → b → b) → b → b) → List a)
-.
-  ( λ nat->Int : Nat → Int
+
+. λ Pair : Type → Type → Type
+. λ mkPair : (∀ a . ∀ b . a → b → Pair a b)
+. λ first : (∀ a . ∀ b . Pair a b → a)
+. λ second : (∀ a . ∀ b . Pair a b → b)
+
+. ( λ nat->Int : Nat → Int
   . λ succ : Nat → Nat
   . λ zero : Nat
   . λ plus : Nat → Nat → Nat
-  .
-    ( λ mult : Nat → Nat → Nat
-    . nat->Int
-        (mult
-          (succ (succ (succ zero)))
-          (succ (succ zero))) )
+
+  . λ cons : (∀ a . a → List a → List a)
+  . λ nil : (∀ a . List a)
+
+  . ( λ mult : Nat → Nat → Nat
+    . λ countToN : Nat → List Nat
+
+    . ( λ product : List Nat → Nat
+      . ( λ factorial : Nat → Nat
+        . nat->Int (factorial (succ (succ (succ (succ (succ (succ (succ (succ zero)))))))))
+        )
+
+        -- FACTORIAL
+        ( λ n : Nat
+        . product (countToN n)
+        )
+      )
+
+      -- product
+      ( λ list : List Nat
+      . foldList Nat list Nat mult (succ zero)
+      )
+    )
 
     -- mult
     ( λ lhs : Nat
     . λ rhs : Nat
-      . foldNat lhs Nat (plus rhs) zero )
+    . foldNat lhs Nat (plus rhs) zero
+    )
+
+    ( λ n : Nat
+    . second Nat (List Nat)
+        (foldNat n (Pair Nat (List Nat))
+          ( λ indexAndList : Pair Nat (List Nat)
+          . ( λ next : Nat
+            . mkPair Nat (List Nat)
+                next
+                (cons Nat next (second Nat (List Nat) indexAndList))
+            )
+            -- next
+            (succ (first Nat (List Nat) indexAndList))
+          )
+          (mkPair Nat (List Nat) zero (nil Nat)))
+    )
   )
 
   -- nat->Int
   ( λ n : Nat
-  . foldNat n Int (λ x : Int . + 1 x) 0 )
+  . foldNat n Int (λ x : Int . + 1 x) 0
+  )
 
   -- succ
   ( λ n : Nat
@@ -42,16 +81,41 @@
     ( λ a : Type
     . λ f : a → a
     . λ z : a
-      . z ) )
+    . z
+    )
+  )
 
   -- plus
   ( λ lhs : Nat
   . λ rhs : Nat
-    . mkNat
+  . mkNat
       ( λ a : Type
       . λ f : a → a
       . λ z : a
-        . foldNat lhs a f (foldNat rhs a f z) )
+      . foldNat lhs a f (foldNat rhs a f z)
+      )
+  )
+
+  -- cons
+  ( λ a : Type
+  . λ head : a
+  . λ tail : List a
+  . mkList a
+    ( λ accum : Type
+    . λ f : a → accum → accum
+    . λ initial : accum
+    . f head (foldList a tail accum f initial)
+    )
+  )
+
+  -- nil
+  ( λ a : Type
+  . mkList a
+    ( λ accum : Type
+    . λ f : a → accum → accum
+    . λ initial : accum
+    . initial
+    )
   )
 )
 
@@ -71,9 +135,39 @@
 -- foldList
 ( λ a : Type
 . λ list : (∀ b . (a → b → b) → b → b)
-  . list )
+. list
+)
 
 -- mkList
 ( λ a : Type
 . λ fold : (∀ b . (a → b → b) → b → b)
-  . fold )
+. fold
+)
+
+
+-- Pair
+( λ a : Type . λ b : Type . (∀ r . (a → b → r) → r) )
+
+-- mkPair
+( λ a : Type
+. λ b : Type
+. λ left : a
+. λ right : b
+. λ r : Type
+. λ f : a → b → r
+. f left right
+)
+
+-- first
+( λ a : Type
+. λ b : Type
+. λ pair : (∀ r . (a → b → r) → r)
+. pair a (λ left : a . λ right : b . left)
+)
+
+-- second
+( λ a : Type
+. λ b : Type
+. λ pair : (∀ r . (a → b → r) → r)
+. pair b (λ left : a . λ right : b . right)
+)

@@ -10,6 +10,7 @@ import qualified Data.Set as Set
 import Data.Set (Set)
 import qualified Data.Map as Map
 import Data.Map (Map, (!?))
+import Data.Maybe
 
 type Name = String
 
@@ -41,12 +42,37 @@ instance Eq1 ExprF where
 
 type Expr = Fix ExprF
 
+strongStep :: Expr -> Maybe Expr
+strongStep (Fix (Fix (Lambda name typ body) :@ arg)) = Just (substitution arg body)
+strongStep (Fix (func :@ arg)) =
+  case (strongStep func, strongStep arg) of
+    (Nothing, Nothing) -> Nothing
+    (func', arg') -> Just (Fix (fromMaybe func func' :@ fromMaybe arg arg'))
+strongStep (Fix (Lambda name typ body)) =
+  case (strongStep typ, strongStep body) of
+    (Nothing, Nothing) -> Nothing
+    (typ', body') -> Just (Fix (Lambda name (fromMaybe typ typ') (fromMaybe body body')))
+strongStep (Fix (Pi name typ body)) =
+  case (strongStep typ, strongStep body) of
+    (Nothing, Nothing) -> Nothing
+    (typ', body') -> Just (Fix (Pi name (fromMaybe typ typ') (fromMaybe body body')))
+strongStep other = Nothing
+
+weakHeadStep :: Expr -> Maybe Expr
+weakHeadStep (Fix (Fix (Lambda name typ body) :@ arg)) = Just (substitution arg body)
+weakHeadStep _ = Nothing
+
 weakHeadNormalForm :: Expr -> Expr
-weakHeadNormalForm (Fix (func :@ arg)) =
-  case weakHeadNormalForm func of
-    Fix (Lambda name typ body) -> substitution arg body
-    whnf -> Fix (whnf :@ arg)
-weakHeadNormalForm other = other
+weakHeadNormalForm = normalForm weakHeadStep
+
+strongNormalForm :: Expr -> Expr
+strongNormalForm = normalForm strongStep
+
+normalForm :: (Expr -> Maybe Expr) -> Expr -> Expr
+normalForm reducer expr =
+  case reducer expr of
+    Just next -> normalForm reducer next
+    Nothing -> expr
 
 substitution :: Expr -> Expr -> Expr
 substitution replacement expr = shiftFree (-1) (replace (shiftFree 1 replacement) 0 expr)

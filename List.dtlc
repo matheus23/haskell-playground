@@ -1,8 +1,41 @@
 ( λ List : Type → Type
 . λ foldList : (∀ a . List a → ∀ b . (a → b → b) → b → b)
---. λ mkList : (∀ a . (∀ b . (a → b → b) → b → b) → List a)
-.
-3
+. λ mkList : (∀ a . (∀ b . (a → b → b) → b → b) → List a)
+
+. ( λ cons : (∀ a . a → List a → List a)
+  . λ nil : (∀ a . List a)
+
+  . ( λ product : List Int → Int
+    . product (cons Int 0 (cons Int 1 (cons Int 2 (cons Int 3 (nil Int)))))
+    )
+
+    -- product
+    ( λ list : List Int
+    . foldList Int list Int * 1
+    )
+  )
+
+  -- cons
+  ( λ a : Type
+  . λ head : a
+  . λ tail : List a
+  . mkList a
+    ( λ accum : Type
+    . λ f : a → accum → accum
+    . λ initial : accum
+    . f head (foldList a tail accum f initial)
+    )
+  )
+
+  -- nil
+  ( λ a : Type
+  . mkList a
+    ( λ accum : Type
+    . λ f : a → accum → accum
+    . λ initial : accum
+    . initial
+    )
+  )
 )
 
 -- List
@@ -11,10 +44,11 @@
 -- foldList
 ( λ a : Type
 . λ list : (∀ b . (a → b → b) → b → b)
-  . list )
-{-
+. list
+)
+
 -- mkList
 ( λ a : Type
 . λ fold : (∀ b . (a → b → b) → b → b)
-  . fold )
--}
+. fold
+)

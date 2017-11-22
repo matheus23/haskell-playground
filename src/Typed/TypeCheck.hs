@@ -62,7 +62,7 @@ typeCheckAlg typeOfFree expr env =
 
 betaEquivalent :: Expr -> Expr -> Bool
 betaEquivalent lhs rhs =
-  normalize lhs == normalize rhs -- TODO
+  strongNormalForm lhs == strongNormalForm rhs
 
 insertEnv :: Expr -> Env -> Env
 insertEnv expr = Map.insert 0 (shiftFree 1 expr) . Map.mapKeys (+ 1) . fmap (shiftFree 1)
