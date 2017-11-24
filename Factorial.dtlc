@@ -23,13 +23,15 @@
     . λ countToN : Nat → List Nat
 
     . ( λ product : List Nat → Nat
-      . ( λ factorial : Nat → Nat
+      . {-
+        ( λ factorial : Nat → Nat
         . nat->Int (factorial (succ (succ (succ (succ (succ (succ (succ (succ zero)))))))))
         )
+        -}
 
         -- FACTORIAL
         ( λ n : Nat
-        . product (countToN n)
+        . nat->Int (product (countToN n))
         )
       )
 

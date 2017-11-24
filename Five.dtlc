@@ -1,0 +1,37 @@
+( λ Nat : Type
+. λ foldNat : Nat → (∀ a . (a → a) → a → a)
+. λ mkNat : (∀ a . (a → a) → a → a) → Nat
+. ( λ succ : Nat → Nat
+  . λ zero : Nat
+  . succ (succ (succ (succ (succ zero))))
+  )
+
+  -- succ
+  ( λ n : Nat
+  . mkNat
+    ( λ a : Type
+    . λ f : a → a
+    . λ z : a
+      . f (foldNat n a f z)
+    )
+  )
+
+  -- zero
+  ( mkNat
+    ( λ a : Type
+    . λ f : a → a
+    . λ z : a
+    . z
+    )
+  )
+)
+
+
+-- Nat
+( ∀ a . (a → a) → a → a )
+
+-- foldNat
+( λ nat : (∀ a . (a → a) → a → a) . nat )
+
+-- mkNat
+( λ fold : (∀ a . (a → a) → a → a) . fold )

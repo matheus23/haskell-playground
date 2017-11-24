@@ -38,13 +38,16 @@ interpretString str =
         Left error ->
           print $ prettyErr error
 
-interpret :: (Name -> Value) -> Expr -> Value
+interpret :: (Name -> Maybe Value) -> Expr -> Value
 interpret interpretFree expr = para (interpretAlg interpretFree) expr Map.empty
 
-interpretAlg :: (Name -> Value) -> ExprF (Expr, ValueEnv -> Value) -> ValueEnv -> Value
+interpretAlg :: (Name -> Maybe Value) -> ExprF (Expr, ValueEnv -> Value) -> ValueEnv -> Value
 interpretAlg interpretFree expr env =
   case expr of
-    (FreeVar name) -> interpretFree name
+    (FreeVar name) ->
+      case interpretFree name of
+        Just v -> v
+        Nothing -> error ("Cannot interpret literal: " ++ show name)
     (BoundVar index _) -> lookupValueEnv env index
     (Const c) -> error "Cannot evaluate type system constants"
     Pi{} -> error "Cannot evaluate types"
@@ -63,7 +66,7 @@ lookupValueEnv env i =
     Just value -> value
     _ -> error ("Expression built incorrectly. Variable unbound: " ++ show i)
 
-std :: Name -> (TypeCheck Expr, Value)
+std :: Name -> (TypeCheck Expr, Maybe Value)
 std "Int" = primitive "Type" (Pure (Prim TypeInt))
 std "Bool" = primitive "Type" (Pure (Prim TypeBool))
 std "+" = primitive "Int → Int → Int" $ Prim . Integer <$> ((+) <$> integer <*> integer)
@@ -77,7 +80,7 @@ std "if" = primitive "Bool → Int → Int → Int" $ Prim . Integer <$> (runIf 
 std literal =
   case listToMaybe (map fst ((reads :: ReadS Integer) literal)) of
     Just num -> primitive "Int" (pure $ Prim $ Integer num)
-    Nothing -> error $ "Unkown literal: " ++ show literal
+    Nothing -> (Left (InvalidLiteral literal), Nothing)
 
 
 
@@ -88,12 +91,12 @@ runIf False _ r = r
 stdTypes :: Name -> TypeCheck Expr
 stdTypes = fst . std
 
-stdValues :: Name -> Value
+stdValues :: Name -> Maybe Value
 stdValues = snd . std
 
-primitive :: String -> FromValue Value -> (TypeCheck Expr, Value)
+primitive :: String -> FromValue Value -> (TypeCheck Expr, Maybe Value)
 primitive typeName val =
-  (return (parseExpr typeName), makeValue val)
+  (return (parseExpr typeName), Just (makeValue val))
 
 data FromValue a
   = Pure a

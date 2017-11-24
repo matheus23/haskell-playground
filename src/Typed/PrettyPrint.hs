@@ -5,7 +5,7 @@ import Text.PrettyPrint.ANSI.Leijen
 import Data.Functor.Foldable
 
 prettyPrintExpr :: Expr -> Doc
-prettyPrintExpr typ = para prettyPrintExprAlg typ False 0
+prettyPrintExpr expr = group (para prettyPrintExprAlg expr False 0)
 
 prettyPrintExprAlg :: ExprF (Expr, Bool -> Int -> Doc) -> Bool -> Int -> Doc
 prettyPrintExprAlg exprF inTypeLevel precedence =
@@ -36,7 +36,7 @@ prettyPrintExprAlg exprF inTypeLevel precedence =
     (Lambda name (_, ppArgType) (_, ppBody)) ->
       wideParenWhen (precedence > 0)
         (string "λ" <+> string name <+> string ":" <+> ppArgType True 1 <> line
-        <> string "." <+> align (ppBody inTypeLevel 0))
+        <> string "." <+> group (align (ppBody inTypeLevel 0)))
 
     (_, ppFunc) :@ (_, ppArg) | inTypeLevel ->
       parenWhen (precedence > 2)
@@ -44,7 +44,7 @@ prettyPrintExprAlg exprF inTypeLevel precedence =
 
     (_, ppFunc) :@ (_, ppArg) ->
       parenWhen (precedence > 2)
-        (ppFunc inTypeLevel 2 <> line <> group (nest 2 (ppArg inTypeLevel 3)))
+        (ppFunc inTypeLevel 2 <> line <> nest 2 (ppArg inTypeLevel 3))
 
 parenWhen :: Bool -> Doc -> Doc
 parenWhen True = group . parens

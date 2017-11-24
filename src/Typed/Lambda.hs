@@ -111,3 +111,8 @@ replaceAlg (Pi name replaceType replaceBody) replaceIndex replacement =
 replaceAlg (func :@ arg) ind repl = Fix (func ind repl :@ arg ind repl)
 replaceAlg (Const c) _ _ = Fix (Const c)
 replaceAlg (FreeVar name) _ _ = Fix (FreeVar name)
+
+type DeBrujinLookup a = Map Int a
+
+insertFromAbstraction :: a -> DeBrujinLookup a -> DeBrujinLookup a
+insertFromAbstraction value = Map.insert 0 value . Map.mapKeys (+ 1)
