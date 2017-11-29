@@ -1,0 +1,37 @@
+( λ id : ∀ a . a → a
+. ( λ Bool : Type
+  . λ if : Bool → (∀ a . a → a → a)
+  . λ mkBool : (∀ a . a → a → a) → Bool
+  . ( λ true : Bool
+    . λ not : Bool → Bool
+    . not (not true)
+    )
+
+    ( mkBool
+      ( λ a : Type
+      . λ t : a
+      . λ f : a
+      . t
+      )
+    )
+
+    ( λ bool : Bool
+    . mkBool
+        ( λ a : Type
+        . λ t : a
+        . λ f : a
+        . if bool a f t )
+    )
+  )
+
+  ( ∀ a . a → a → a )
+
+  ( id (∀ a . a → a → a) )
+
+  ( id (∀ a . a → a → a) )
+)
+
+( λ a : Type
+. λ x : a
+. x
+)

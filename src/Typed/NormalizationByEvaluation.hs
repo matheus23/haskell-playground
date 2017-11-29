@@ -54,30 +54,21 @@ evalInEnv env expr =
 
 evalAbstractionBody :: ReifyableValueEnv -> Expr -> (ReifyableValue -> ReifyableValue)
 evalAbstractionBody env body arg =
-    (evalInEnv
-      (insertFromAbstraction arg env)
-      body)
+    shiftValue (-1)
+      (evalInEnv
+        (shiftValue 1 <$> insertFromAbstraction arg env)
+        body)
 
-shiftFreeValue :: Int -> Int -> ReifyableValue -> ReifyableValue
-shiftFreeValue limit shift value =
+shiftValue :: Int -> ReifyableValue -> ReifyableValue
+shiftValue shift value =
   case value of
-    Neutral n -> Neutral (shiftFreeNeutral limit shift n)
-
-    FunLam name typ bodyValue ->
-      FunLam name (shiftFreeValue limit shift typ) (shiftFreeValue (limit + 1) shift . bodyValue)
-
-    FunPi name typ bodyValue ->
-      FunPi name (shiftFreeValue limit shift typ) (shiftFreeValue (limit + 1) shift . bodyValue)
-
+    Neutral n -> Neutral (shiftNeutral shift n)
     _ -> value
 
-shiftFreeNeutral :: Int -> Int -> Neutral -> Neutral
-shiftFreeNeutral limit shift (SynApp func val) =
-  SynApp (shiftFreeNeutral limit shift func) (shiftFreeValue limit shift val)
-shiftFreeNeutral limit shift (SynBoundVar index name)
-  | index >= limit = SynBoundVar (shift + index) name
-  | otherwise = SynBoundVar index name
-shiftFreeNeutral limit _ other = other
+shiftNeutral :: Int -> Neutral -> Neutral
+shiftNeutral shift (SynApp func val) = SynApp (shiftNeutral shift func) (shiftValue shift val)
+shiftNeutral shift (SynBoundVar index name) = SynBoundVar (shift + index) name
+shiftNeutral _ other = other
 
 evalLiteral :: Name -> Maybe ReifyableValue
 evalLiteral "Int" = Just (RPrim TypeInt)
@@ -106,9 +97,9 @@ reify value =
     RPrim prim -> reifyPrim prim
     Neutral neutral -> reifyNeutral neutral
     FunLam name typ getBody ->
-      Fix (Lambda name (reify typ) (reify (getBody (Neutral (SynBoundVar 0 name)))))
+      Fix (Lambda name (reify typ) (reify (getBody (Neutral (SynBoundVar (-1) name)))))
     FunPi name typ getBody ->
-      Fix (Pi name (reify typ) (reify (getBody (Neutral (SynBoundVar 0 name)))))
+      Fix (Pi name (reify typ) (reify (getBody (Neutral (SynBoundVar (-1) name)))))
 
 reifyPrim :: Primitive -> Expr
 reifyPrim (Integer i) = Fix (FreeVar (show i))
