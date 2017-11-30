@@ -3,7 +3,7 @@
 . λ mkNat : (∀ a . (a → a) → a → a) → Nat
 . ( λ zero : Nat
   . λ succ : Nat → Nat
-  . succ zero
+  . succ (succ (succ (succ (succ zero))))
   )
 
   -- zero
