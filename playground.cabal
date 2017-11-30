@@ -33,7 +33,8 @@ library
                        SExpr.PrettyPrint,
                        SExpr.Test,
                        Typed.Lambda,
-                       Typed.Parser
+                       Typed.Parser,
+                       HOAS.Lambda
 
   build-depends:       base, megaparsec >= 6.0.0, containers >= 0.5.10, pretty, QuickCheck >= 2.10.0,
                        recursion-schemes, ansi-wl-pprint, deriving-compat
