@@ -44,6 +44,7 @@ library
 executable lambda-reactive
   hs-source-dirs:      lambda-reactive
   main-is:             Main.hs
+  other-modules:       TellingTextField
   build-depends:       playground, base, containers, linear,
                        Reactives, DeclarativeGraphics, DeclarativeGraphics-Cairo, DeclarativeGraphics-SDL
   extensions:          DeriveFunctor, OverloadedStrings, TemplateHaskell, ScopedTypeVariables
