@@ -25,41 +25,9 @@ import ProofWidget
 
 mstyle :: TextStyle
 mstyle = defaultTextStyle { fontSize = 20 }
-{-
+
 main :: IO ()
 main =
   runReactive
-    (move (V2 400 500) . alignHV (0.5, 1) . viewFocusableProof mstyle)
+    (React.toReactive . move (V2 400 500) . alignHV (0.5, 1) . viewFocusableProof mstyle)
     (nothingFocused exampleProof)
--}
-
-data Example
-  = Str Bool String
-  | Node Bool Example Example
-
-exampleWidget :: Example -> React Example
-exampleWidget (Str False name) =
-    React.onEventPre (React.filterInside reactive handleClick) reactive
-  where
-    reactive = Reactive.constant Nothing (text mstyle name)
-    handleClick (MouseInput (MousePress _ MBLeft)) = Just (Str True name)
-    handleClick _ = Nothing
-exampleWidget (Str True name) =
-    React.onEventPre handleClickOutside reactive
-  where
-    reactive = Reactive.constant Nothing (addBackground lightBlue (text mstyle name))
-    handleClickOutside event@(MouseInput (MousePress _ MBLeft))
-      | not (Reactive.eventInside reactive event) = Just (Str False name)
-    handleClickOutside _ = Nothing
-exampleWidget (Node False exL exR) =
-    Reactive.attachFormTo right (text mstyle " ⊾ ") reactiveL
-    `React.besidesRight` reactiveR
-  where
-    reactiveL = fmap (flip (Node False) exR) <$> exampleWidget exL
-    reactiveR = fmap (Node False exL) <$> exampleWidget exR
-
-
-main :: IO ()
-main = runReactive
-  (move (V2 400 500) . alignHV (0.5, 1) . React.toReactive exampleWidget)
-  (Node False (Str False "x") (Str False "y"))

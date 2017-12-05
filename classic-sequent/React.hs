@@ -17,41 +17,24 @@ import FormUtils
 import Data.Maybe
 import Data.Monoid
 
-type React a = Reactive Input (Maybe a)
+type React a = Reactive Input (a, Bool)
 
-toReactive :: (m -> React m) -> m -> Reactive Input m
-toReactive react model = fromMaybe model <$> react model
+toReactive :: React a -> Reactive Input a
+toReactive = fmap fst
 
-atopReact :: React a -> React a -> React a
-atopReact (Reactive reactAtop visualAtop) (Reactive reactBelow visualBelow) =
-    Reactive react (visualAtop `atop` visualBelow)
+makeReact :: Reactive Input a -> React a
+makeReact reactive =
+  Reactive.onEvent attachInside reactive
   where
-    react event = getFirst (First (reactAtop event) <> First (reactBelow event))
+    attachInside event@(MouseInput (MousePress _ _)) model
+      | Reactive.eventInside reactive event = (model, True)
+      | otherwise = (model, False)
+    attachInside event model = (model, False)
 
-besidesTo :: V2 Double -> React a -> React a -> React a
-besidesTo dir =
-    Reactive.besidesTo dir combine
-  where
-    combine a b = getFirst (First a <> First b)
+besidesTo :: V2 Double -> React (a -> b) -> React a -> React b
+besidesTo dir = Reactive.besidesTo dir combine
+  where combine (f, refConsumed) (a, attConsumed) = (f a, refConsumed || attConsumed)
 
-besidesRight, besidesDown :: React a -> React a -> React a
+besidesRight, besidesDown :: React (a -> b) -> React a -> React b
 besidesRight = besidesTo right
 besidesDown = besidesTo down
-
-onEventPre :: (Input -> Maybe a) -> React a -> React a
-onEventPre onEvent =
-    Reactive.onEvent handleEvent
-  where
-    handleEvent event maybeModel = onEvent event
-
-onEventPost :: (Input -> Maybe a) -> React a -> React a
-onEventPost onEvent =
-    Reactive.onEvent handleEvent
-  where
-    handleEvent event Nothing = onEvent event
-    handleEvent event justModel = justModel
-
-filterInside :: HasBorder b => b -> (Input -> Maybe a) -> Input -> Maybe a
-filterInside bordered func event
-  | Reactive.eventInside bordered event = func event
-  | otherwise = Nothing

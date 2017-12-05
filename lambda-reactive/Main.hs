@@ -18,6 +18,8 @@ import Utils (orElse, isInside, orTry, rightAngle)
 import Linear
 import FormUtils
 
+import Control.Arrow (first)
+
 import qualified TellingTextField
 import qualified Widgets.TextField as TextField
 
@@ -42,20 +44,27 @@ viewTelling TwoTextFields{..} =
       (Reactive.onEvent handleEvent reactive)
   where
     reactive =
-      (combine <$> leftReactive)
+      mapFocused (TwoTextFields focused) leftReactive
+      `besidesRightTelling`
+      (Reactive.constant id (text defaultTextStyle " ++ ")
       `Reactive.besidesRight`
-      rightReactive
+      rightReactive)
 
-    leftReactive =
-      Reactive.attachFormTo right (text defaultTextStyle " ++ ")
-        (TellingTextField.view defaultTextStyle "left" leftTF)
-
+    leftReactive = TellingTextField.view defaultTextStyle "left" leftTF
     rightReactive = TellingTextField.view defaultTextStyle "right" rightTF
-
-    combine (modelLeft, consumedLeft) (modelRight, consumedRight) =
-      (TwoTextFields focused modelLeft modelRight, consumedLeft || consumedRight)
 
     handleEvent event (model, True) = (model { focused = False }, True)
     handleEvent ev@(MouseInput (MousePress _ _)) (model, False)
       | Reactive.eventInside reactive ev = (model { focused = True }, True)
     handleEvent other (model, False) = (model, False)
+
+infixr `besidesRightTelling`
+
+besidesRightTelling :: Transformable e => Reactive e (a -> b, Bool) -> Reactive e (a, Bool) -> Reactive e (b, Bool)
+besidesRightTelling reference attachment =
+    (combine <$> reference) `Reactive.besidesRight` attachment
+  where
+    combine (f, refConsumed) (a, attConsumed) = (f a, refConsumed || attConsumed)
+
+mapFocused :: (a -> b) -> Reactive e (a, Bool) -> Reactive e (b, Bool)
+mapFocused f reactive = first f <$> reactive
